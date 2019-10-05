@@ -84,8 +84,17 @@ class BearerTokenAuthentication(BaseOidcAuthentication):
 
     @cache(ttl=api_settings.OIDC_BEARER_TOKEN_EXPIRATION_TIME)
     def get_userinfo(self, token):
-        response = requests.get(self.oidc_config['userinfo_endpoint'],
-                                headers={'Authorization': 'Bearer {0}'.format(token.decode('ascii'))})
+        headers = {'Authorization': 'Bearer {0}'.format(token.decode('ascii'))}
+        target_url = self.oidc_config['userinfo_endpoint']
+
+        if api_settings.OIDC_BACKEND_REMAPPING is not None:
+            headers['Host'] = api_settings.OIDC_BACKEND_REMAPPING['from']
+            target_url = target_url.replace(
+                api_settings.OIDC_BACKEND_REMAPPING['from'],
+                api_settings.OIDC_BACKEND_REMAPPING['to']
+            )
+
+        response = requests.get(target_url, headers=headers)
         response.raise_for_status()
 
         return response.json()

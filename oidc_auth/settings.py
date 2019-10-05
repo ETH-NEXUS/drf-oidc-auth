@@ -9,6 +9,11 @@ DEFAULTS = {
     'OIDC_ENDPOINTS': {},
     'OIDC_AUDIENCES': None,
 
+    # causes the authenticator to contact new_hostname, but pretending as though
+    # the request is from old_hostname. should be of the form:
+    # {'from': <old_hostname>, 'to': <new_hostname>}
+    'OIDC_BACKEND_REMAPPING': None,
+
     # Number of seconds in the past valid tokens can be issued
     'OIDC_LEEWAY': 600,
 
