@@ -92,12 +92,8 @@ class BearerTokenAuthentication(BaseOidcAuthentication):
     def make_authed_request(token, target_url):
         headers = {'Authorization': 'Bearer {0}'.format(token.decode('ascii'))}
 
-        if api_settings.OIDC_BACKEND_REMAPPING is not None:
-            headers['Host'] = api_settings.OIDC_BACKEND_REMAPPING['from']
-            target_url = target_url.replace(
-                api_settings.OIDC_BACKEND_REMAPPING['from'],
-                api_settings.OIDC_BACKEND_REMAPPING['to']
-            )
+        if api_settings.OIDC_EXTERNAL_HOST is not None:
+            headers['Host'] = api_settings.OIDC_EXTERNAL_HOST
 
         response = requests.get(target_url, headers=headers)
         response.raise_for_status()
