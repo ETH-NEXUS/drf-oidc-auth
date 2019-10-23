@@ -45,7 +45,9 @@ def get_user_by_id(request, id_token):
 class BaseOidcAuthentication(BaseAuthentication):
     @cached_property
     def oidc_config(self):
-        return requests.get(api_settings.OIDC_ENDPOINT + '/.well-known/openid-configuration').json()
+        # FIXME: see BearerTokenAuthentication.make_authed_request for more details about verify=False, but
+        #  in short we should find some way to not have to use it.
+        return requests.get(api_settings.OIDC_ENDPOINT + '/.well-known/openid-configuration', verify=False).json()
 
 
 class BearerTokenAuthentication(BaseOidcAuthentication):
@@ -95,7 +97,12 @@ class BearerTokenAuthentication(BaseOidcAuthentication):
         if api_settings.OIDC_EXTERNAL_HOST is not None:
             headers['Host'] = api_settings.OIDC_EXTERNAL_HOST
 
-        response = requests.get(target_url, headers=headers)
+        # FIXME: we're not verifying SSL requests since we know that the server lives inside our cluster,
+        #  but clearly this is less than ideal. the problem is that we're doing a backchannel request
+        #  to the server using its local name (nginx, say), but it tries to auth it using the certificate
+        #  that's associated with its official name (tpreports-dev.nexus.etzh.ch, say). we might need to
+        #  allow regular HTTP backend requests or find some other way to make the request.
+        response = requests.get(target_url, headers=headers, verify=False)
         response.raise_for_status()
 
         return response.json()
