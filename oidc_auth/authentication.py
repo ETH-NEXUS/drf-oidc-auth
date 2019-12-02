@@ -7,6 +7,7 @@ from jwkest import JWKESTException
 from jwkest.jwk import KEYS
 from jwkest.jws import JWS
 import requests
+from requests import request
 from requests.exceptions import HTTPError
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
@@ -43,7 +44,8 @@ def get_user_by_id(request, id_token):
 
 
 class BaseOidcAuthentication(BaseAuthentication):
-    @cached_property
+    @property
+    @cache(ttl=api_settings.OIDC_BEARER_TOKEN_EXPIRATION_TIME)
     def oidc_config(self):
         # FIXME: see BearerTokenAuthentication.make_authed_request for more details about verify=False, but
         #  in short we should find some way to not have to use it.
@@ -141,11 +143,16 @@ class JSONWebTokenAuthentication(BaseOidcAuthentication):
 
         return auth[1]
 
-    @cache(ttl=api_settings.OIDC_JWKS_EXPIRATION_TIME)
     def jwks(self):
         keys = KEYS()
-        keys.load_from_url(self.oidc_config['jwks_uri'])
+        keys.load_jwks(self.jwks_data())
         return keys
+
+    @cache(ttl=api_settings.OIDC_JWKS_EXPIRATION_TIME)
+    def jwks_data(self):
+        r = request("GET", self.oidc_config['jwks_uri'], allow_redirects=True)
+        r.raise_for_status()
+        return r.text
 
     @cached_property
     def issuer(self):
@@ -177,9 +184,6 @@ class JSONWebTokenAuthentication(BaseOidcAuthentication):
             raise AuthenticationFailed(msg)
         if len(id_token['aud']) > 1 and 'azp' not in id_token:
             msg = _('Invalid Authorization header. Missing JWT authorized party.')
-            raise AuthenticationFailed(msg)
-        if 'azp' in id_token and id_token['azp'] not in api_settings.OIDC_AUDIENCES:
-            msg = _('Invalid Authorization header. Invalid JWT authorized party.')
             raise AuthenticationFailed(msg)
 
         utc_timestamp = timegm(datetime.datetime.utcnow().utctimetuple())

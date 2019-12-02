@@ -29,6 +29,10 @@ DEFAULTS = {
 
     # Create user if user authenticates but is not in the local database
     'CREATE_USER': False,
+    
+    # The Django cache to use
+    'OIDC_CACHE_NAME': 'default',
+    'OIDC_CACHE_PREFIX': 'oidc_auth.'
 }
 
 # List of settings that may be in string import notation.
